@@ -529,14 +529,15 @@ static void styleNowPlayingBar(UIViewController *container) {
 
 // The page the bar stands in passes touches outside the bar through, and the bar in the tab bar's row is
 // below the page's bounds: a touch there reaches the bar only through this. Only the narrowed card takes
-// one: the container's view keeps the screen's width, and took the touches meant for the tab bar's circles.
+// one: the container's view keeps the screen's width. The page can also hit its own layout views at
+// the bar's old position, so none of its original hits apply while the card is in the tab bar's row.
 %hook _TtC22NowPlaying_BarPageImplP33_CCC0D2EEA6D4725EECD8965E8C38C86D20TouchPassthroughView
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     UIView *hit = %orig;
     UIView *moved = sg_inline;
-    if ((hit && hit != (UIView *)self) || ![moved isDescendantOfView:(UIView *)self]) return hit;
+    if (!moved || ![moved isDescendantOfView:(UIView *)self]) return hit;
     UIView *inside = [moved hitTest:[(UIView *)self convertPoint:point toView:moved] withEvent:event];
-    return inside && inside != moved ? inside : hit;
+    return inside && inside != moved ? inside : nil;
 }
 %end
 

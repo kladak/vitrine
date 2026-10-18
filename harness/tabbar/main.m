@@ -715,6 +715,35 @@ static void after(double seconds, dispatch_block_t block) {
         after(3.5, ^{ SGRSetTabBarMinimized(NO, YES); });
         after(5.0, ^{ report(chrome, @"expanded again"); });
     }
+    // Issue #61: a layout-only child stays at the page's old position after its card moves down.
+    // The original hit must not win there, but ordinary hits must return when the card expands.
+    if ([mode isEqualToString:@"ghost"]) {
+        UIView *ghost = [[UIView alloc] initWithFrame:chrome.npb.bounds];
+        ghost.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [chrome.npb insertSubview:ghost atIndex:0];
+        after(1.0, ^{ SGRSetTabBarMinimized(YES, NO); });
+        after(2.0, ^{
+            UIWindow *window = chrome.view.window;
+            CGPoint oldPosition = CGPointMake(CGRectGetMidX(ghost.bounds), 8);
+            UIView *hit = [chrome.npb hitTest:oldPosition withEvent:nil];
+            NSCAssert(hit == nil, @"the minimized page must pass its old hit area through");
+            CGPoint inWindow = [chrome.npb convertPoint:oldPosition toView:window];
+            UIView *page = chrome.tabs.childViewControllers.firstObject.view;
+            NSCAssert([[window hitTest:inWindow withEvent:nil] isDescendantOfView:page],
+                      @"content behind the old bar must receive the touch");
+            CGRect card = SGRNowPlayingCardFrameIn(window, NULL);
+            NSCAssert(!CGRectIsNull(card), @"the minimized card must exist");
+            CGPoint middle = CGPointMake(CGRectGetMidX(card), CGRectGetMidY(card));
+            NSCAssert([[window hitTest:middle withEvent:nil] isDescendantOfView:chrome.npb],
+                      @"the minimized card must still receive touches");
+            SGRSetTabBarMinimized(NO, NO);
+            // Outside the expanded card, but inside the layout-only child.
+            CGPoint edge = CGPointMake(1, 8);
+            NSCAssert([chrome.npb hitTest:edge withEvent:nil] == ghost,
+                      @"the expanded page must preserve its original hit testing");
+            NSLog(@"[harness] ghost touch regression PASS");
+        });
+    }
     // `tap`: the bar minimized at 1 s, then what a finger on the leading circle lands on, and that tap played.
     if ([mode isEqualToString:@"tap"]) {
         after(1.0, ^{ SGRSetTabBarMinimized(YES, YES); });
