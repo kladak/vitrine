@@ -108,6 +108,11 @@ largest step 49 pt for the platter (36 with a split tab), 16 for the card (27), 
 turns, no title cut at any point, every check IN STEP. Under Reduce Motion (`defaults write
 com.apple.Accessibility ReduceMotionEnabled` in the simulator) the bar and the card change in the same frame.
 
+`ghost` checks issue #61 with a layout-only child left at the page's original position. It asserts
+that touches there reach the page behind the minimized bar, the narrowed card still takes touches,
+and the expanded page preserves its original hit testing. A successful run logs
+`[harness] ghost touch regression PASS`. This fixture tests hit routing, not Spotify's pan recognizer.
+
 `minimize-check.c` runs the scroll's steps (`MinimizeStep.h`) on the Mac:
 
     cc -I../../tweak/Sources/Redesigned/Navbar minimize-check.c -o build/minimize-check && build/minimize-check
